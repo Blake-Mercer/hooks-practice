@@ -4,7 +4,6 @@ import IngredientForm from './IngredientForm/IngredientForm';
 import IngredientList from './IngredientList/IngredientList';
 import ErrorModal from '../UI/ErrorModal/ErrorModal';
 import Search from './Search/Search';
-import ConfirmationModal from '../UI/ConfirmationModal/ConfirmationModal';
 
 // Trying to implement the Confirmation Modal before someone deletes a list item. I cannot figure out the logic currently.
 
