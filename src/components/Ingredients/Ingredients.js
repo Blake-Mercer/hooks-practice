@@ -1,23 +1,24 @@
-import React, { useReducer, useCallback, useMemo } from 'react';
+import React, { useReducer, useCallback, useMemo, useState } from 'react';
 
 import IngredientForm from './IngredientForm/IngredientForm';
 import IngredientList from './IngredientList/IngredientList';
 import ErrorModal from '../UI/ErrorModal/ErrorModal';
 import Search from './Search/Search';
 import ConfirmationModal from '../UI/ConfirmationModal/ConfirmationModal';
+import ReducerTypes from './constants';
 
 // Trying to implement the Confirmation Modal before someone deletes a list item. I cannot figure out the logic currently.
 
 const ingredientReducer = (currentIngredients, action) => {
   switch (action.type) {
-    case 'SET':
+    case ReducerTypes.set:
       return action.ingredients;
-    case 'ADD':
+    case ReducerTypes.add:
       return [...currentIngredients, action.ingredient];
-    case 'DELETE':
+    case ReducerTypes.delete:
       return currentIngredients.filter((ing) => ing.id !== action.id);
     default:
-      throw new Error('BRO TF??');
+      throw new Error('BRO TF?? you smell like dry dick');
   }
 };
 
@@ -45,11 +46,21 @@ const Ingredients = () => {
     loading: false,
     error: null,
   });
-
+  const [showModal, setShowModal] = useState(false);
+  const [activeIngredientIndex, setActiveIngredientIndex] = useState(null);
   const filterIngredientsHandler = useCallback((filterIngredients) => {
     // setUserIngredients(filterIngredients);
-    dispatch({ type: 'SET', ingredients: filterIngredients });
+    dispatch({ type: ReducerTypes.set, ingredients: filterIngredients });
   }, []);
+
+  const onIngredientClick = (index) => {
+    setShowModal(true);
+    setActiveIngredientIndex(index);
+  };
+
+  const onCancel = () => {
+    setShowModal(false);
+  };
 
   const addIngredientHandler = useCallback((ingredient) => {
     dispatchHttp({ type: 'SEND' });
@@ -71,49 +82,66 @@ const Ingredients = () => {
         //   { id: resData.name, ...ingredient },
         // ]);
         dispatch({
-          type: 'ADD',
+          type: ReducerTypes.add,
           ingredient: { id: resData.name, ...ingredient },
         });
       });
   }, []);
 
-  const removeIngredientHandler = useCallback((ingredientId) => {
+  const removeIngredientHandler = () => {
     dispatchHttp({ type: 'SEND' });
     fetch(
-      `https://hooks-intro-51b69-default-rtdb.firebaseio.com/ingredients/${ingredientId}.json`,
+      `https://hooks-intro-51b69-default-rtdb.firebaseio.com/ingredients/${userIngredients[activeIngredientIndex].id}.json`,
       {
-        method: 'DELETE',
+        //idk what this is doing
+        method: ReducerTypes.delete,
       }
     )
       .then((res) => {
         dispatchHttp({ type: 'RESPONSE' });
         // setUserIngredients((prevIngredients) =>
-        //   prevIngredients.filter((ingredient) => ingredient.id !== ingredientId)
+        //   prevIngredients.filter((ingredient) => ingredient.id !== index)
         // );
-        dispatch({ type: 'DELETE', id: ingredientId });
+        dispatch({
+          type: ReducerTypes.delete,
+          id: userIngredients[activeIngredientIndex].id,
+        });
+        setShowModal(false);
       })
       .catch((err) => {
         dispatchHttp({ type: 'ERROR', errorMessage: 'SOMETHING WENT WRONG' });
+        // its working just failing cuz https
+        dispatch({
+          type: ReducerTypes.delete,
+          id: userIngredients[activeIngredientIndex].id,
+        });
+        setShowModal(false);
       });
-  }, []);
+  };
 
   const clearError = useCallback(() => {
     dispatchHttp({ type: 'CLEAR' });
   }, []);
 
-  const ingredientList = useMemo(() => {
+  const ingredientList = () => {
     return (
       <IngredientList
         ingredients={userIngredients}
-        onRemoveItem={removeIngredientHandler}
+        onIngredientClick={onIngredientClick}
       />
     );
-  }, [userIngredients, removeIngredientHandler]);
+  };
 
   return (
     <div className='App'>
       {httpState.error && (
         <ErrorModal onClose={clearError}>{httpState.error}</ErrorModal>
+      )}
+      {showModal && (
+        <ConfirmationModal
+          onCancel={onCancel}
+          onContinue={removeIngredientHandler}
+        />
       )}
       <IngredientForm
         onAddIngredient={addIngredientHandler}
@@ -122,7 +150,7 @@ const Ingredients = () => {
 
       <section>
         <Search onLoadIngredients={filterIngredientsHandler} />
-        {ingredientList}
+        {ingredientList()}
       </section>
     </div>
   );
