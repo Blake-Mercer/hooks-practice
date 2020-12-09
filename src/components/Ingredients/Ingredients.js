@@ -6,6 +6,7 @@ import ErrorModal from '../UI/ErrorModal/ErrorModal';
 import Search from './Search/Search';
 import ConfirmationModal from '../UI/ConfirmationModal/ConfirmationModal';
 import ReducerTypes from './constants';
+import useHttp from '../../hooks/http';
 
 // Trying to implement the Confirmation Modal before someone deletes a list item. I cannot figure out the logic currently.
 
@@ -38,22 +39,21 @@ const httpReducer = (curHttpState, action) => {
 };
 
 const Ingredients = () => {
-  // const [userIngredients, setUserIngredients] = useState([]);
-  // const [isLoading, setIsLoading] = useState(false);
-  // const [error, setError] = useState();
-  const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
   const [httpState, dispatchHttp] = useReducer(httpReducer, {
     loading: false,
     error: null,
   });
+  const { sendRequest, error, data, isLoading } = useHttp();
+  const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
   const [showModal, setShowModal] = useState(false);
   const [activeIngredientIndex, setActiveIngredientIndex] = useState(null);
+
   const filterIngredientsHandler = useCallback((filterIngredients) => {
-    // setUserIngredients(filterIngredients);
     dispatch({ type: ReducerTypes.set, ingredients: filterIngredients });
   }, []);
 
   const onIngredientClick = (index) => {
+    console.log(userIngredients);
     setShowModal(true);
     setActiveIngredientIndex(index);
   };
@@ -77,10 +77,6 @@ const Ingredients = () => {
         return res.json();
       })
       .then((resData) => {
-        // setUserIngredients((prevIngredients) => [
-        //   ...prevIngredients,
-        //   { id: resData.name, ...ingredient },
-        // ]);
         dispatch({
           type: ReducerTypes.add,
           ingredient: { id: resData.name, ...ingredient },
@@ -89,34 +85,41 @@ const Ingredients = () => {
   }, []);
 
   const removeIngredientHandler = () => {
-    dispatchHttp({ type: 'SEND' });
-    fetch(
+    // for some reason useringredients[activeIngredientIndex].id becomes undefined you go to use this function.
+
+    sendRequest(
       `https://hooks-intro-51b69-default-rtdb.firebaseio.com/ingredients/${userIngredients[activeIngredientIndex].id}.json`,
-      {
-        //idk what this is doing
-        method: ReducerTypes.delete,
-      }
-    )
-      .then((res) => {
-        dispatchHttp({ type: 'RESPONSE' });
-        // setUserIngredients((prevIngredients) =>
-        //   prevIngredients.filter((ingredient) => ingredient.id !== index)
-        // );
-        dispatch({
-          type: ReducerTypes.delete,
-          id: userIngredients[activeIngredientIndex].id,
-        });
-        setShowModal(false);
-      })
-      .catch((err) => {
-        dispatchHttp({ type: 'ERROR', errorMessage: 'SOMETHING WENT WRONG' });
-        // its working just failing cuz https
-        dispatch({
-          type: ReducerTypes.delete,
-          id: userIngredients[activeIngredientIndex].id,
-        });
-        setShowModal(false);
-      });
+      ReducerTypes.delete
+    );
+
+    // dispatchHttp({ type: 'SEND' });
+    // fetch(
+    //   `https://hooks-intro-51b69-default-rtdb.firebaseio.com/ingredients/${userIngredients[activeIngredientIndex].id}.json`,
+    //   {
+    //     //idk what this is doing
+    //     method: ReducerTypes.delete,
+    //   }
+    // )
+    //   .then((res) => {
+    //     dispatchHttp({ type: 'RESPONSE' });
+    //     // setUserIngredients((prevIngredients) =>
+    //     //   prevIngredients.filter((ingredient) => ingredient.id !== index)
+    //     // );
+    //     dispatch({
+    //       type: ReducerTypes.delete,
+    //       id: userIngredients[activeIngredientIndex].id,
+    //     });
+    //     setShowModal(false);
+    //   })
+    //   .catch((err) => {
+    //     dispatchHttp({ type: 'ERROR', errorMessage: 'SOMETHING WENT WRONG' });
+    //     // its working just failing cuz https
+    //     dispatch({
+    //       type: ReducerTypes.delete,
+    //       id: userIngredients[activeIngredientIndex].id,
+    //     });
+    //     setShowModal(false);
+    //   });
   };
 
   const clearError = useCallback(() => {
