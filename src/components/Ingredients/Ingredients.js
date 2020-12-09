@@ -23,26 +23,26 @@ const ingredientReducer = (currentIngredients, action) => {
   }
 };
 
-const httpReducer = (curHttpState, action) => {
-  switch (action.type) {
-    case 'SEND':
-      return { loading: true, error: null };
-    case 'RESPONSE':
-      return { ...curHttpState, loading: false };
-    case 'ERROR':
-      return { loading: false, error: action.errorMessage };
-    case 'CLEAR':
-      return { ...curHttpState, error: null };
-    default:
-      throw new Error('BRO TF??');
-  }
-};
+// const httpReducer = (curHttpState, action) => {
+//   switch (action.type) {
+//     case 'SEND':
+//       return { loading: true, error: null };
+//     case 'RESPONSE':
+//       return { ...curHttpState, loading: false };
+//     case 'ERROR':
+//       return { loading: false, error: action.errorMessage };
+//     case 'CLEAR':
+//       return { ...curHttpState, error: null };
+//     default:
+//       throw new Error('BRO TF??');
+//   }
+// };
 
 const Ingredients = () => {
-  const [httpState, dispatchHttp] = useReducer(httpReducer, {
-    loading: false,
-    error: null,
-  });
+  // const [httpState, dispatchHttp] = useReducer(httpReducer, {
+  //   loading: false,
+  //   error: null,
+  // });
   const { sendRequest, error, data, isLoading } = useHttp();
   const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
   const [showModal, setShowModal] = useState(false);
@@ -63,25 +63,25 @@ const Ingredients = () => {
   };
 
   const addIngredientHandler = useCallback((ingredient) => {
-    dispatchHttp({ type: 'SEND' });
-    fetch(
-      'https://hooks-intro-51b69-default-rtdb.firebaseio.com/ingredients.json',
-      {
-        method: 'POST',
-        body: JSON.stringify(ingredient),
-        headers: { 'Content-Type': 'application/json' },
-      }
-    )
-      .then((res) => {
-        dispatchHttp({ type: 'RESPONSE' });
-        return res.json();
-      })
-      .then((resData) => {
-        dispatch({
-          type: ReducerTypes.add,
-          ingredient: { id: resData.name, ...ingredient },
-        });
-      });
+    // dispatchHttp({ type: 'SEND' });
+    // fetch(
+    //   'https://hooks-intro-51b69-default-rtdb.firebaseio.com/ingredients.json',
+    //   {
+    //     method: 'POST',
+    //     body: JSON.stringify(ingredient),
+    //     headers: { 'Content-Type': 'application/json' },
+    //   }
+    // )
+    //   .then((res) => {
+    //     dispatchHttp({ type: 'RESPONSE' });
+    //     return res.json();
+    //   })
+    //   .then((resData) => {
+    //     dispatch({
+    //       type: ReducerTypes.add,
+    //       ingredient: { id: resData.name, ...ingredient },
+    //     });
+    //   });
   }, []);
 
   const removeIngredientHandler = () => {
@@ -91,7 +91,7 @@ const Ingredients = () => {
       `https://hooks-intro-51b69-default-rtdb.firebaseio.com/ingredients/${userIngredients[activeIngredientIndex].id}.json`,
       ReducerTypes.delete
     );
-
+    setShowModal(false);
     // dispatchHttp({ type: 'SEND' });
     // fetch(
     //   `https://hooks-intro-51b69-default-rtdb.firebaseio.com/ingredients/${userIngredients[activeIngredientIndex].id}.json`,
@@ -123,7 +123,7 @@ const Ingredients = () => {
   };
 
   const clearError = useCallback(() => {
-    dispatchHttp({ type: 'CLEAR' });
+    // dispatchHttp({ type: 'CLEAR' });
   }, []);
 
   const ingredientList = () => {
@@ -137,9 +137,7 @@ const Ingredients = () => {
 
   return (
     <div className='App'>
-      {httpState.error && (
-        <ErrorModal onClose={clearError}>{httpState.error}</ErrorModal>
-      )}
+      {error && <ErrorModal onClose={clearError}>{error}</ErrorModal>}
       {showModal && (
         <ConfirmationModal
           onCancel={onCancel}
@@ -148,7 +146,7 @@ const Ingredients = () => {
       )}
       <IngredientForm
         onAddIngredient={addIngredientHandler}
-        loading={httpState.loading}
+        loading={isLoading}
       />
 
       <section>
