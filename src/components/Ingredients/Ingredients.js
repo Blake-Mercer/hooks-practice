@@ -1,4 +1,4 @@
-import React, { useReducer, useCallback, useState } from 'react';
+import React, { useReducer, useCallback, useState, useEffect } from 'react';
 
 import IngredientForm from './IngredientForm/IngredientForm';
 import IngredientList from './IngredientList/IngredientList';
@@ -7,8 +7,6 @@ import Search from './Search/Search';
 import ConfirmationModal from '../UI/ConfirmationModal/ConfirmationModal';
 import ReducerTypes from './constants';
 import useHttp from '../../hooks/http';
-
-// Trying to implement the Confirmation Modal before someone deletes a list item. I cannot figure out the logic currently.
 
 const ingredientReducer = (currentIngredients, action) => {
   switch (action.type) {
@@ -23,30 +21,31 @@ const ingredientReducer = (currentIngredients, action) => {
   }
 };
 
-// const httpReducer = (curHttpState, action) => {
-//   switch (action.type) {
-//     case 'SEND':
-//       return { loading: true, error: null };
-//     case 'RESPONSE':
-//       return { ...curHttpState, loading: false };
-//     case 'ERROR':
-//       return { loading: false, error: action.errorMessage };
-//     case 'CLEAR':
-//       return { ...curHttpState, error: null };
-//     default:
-//       throw new Error('BRO TF??');
-//   }
-// };
-
 const Ingredients = () => {
-  // const [httpState, dispatchHttp] = useReducer(httpReducer, {
-  //   loading: false,
-  //   error: null,
-  // });
-  const { sendRequest, error, data, isLoading } = useHttp();
+  const {
+    sendRequest,
+    error,
+    data,
+    isLoading,
+    reqExtra,
+    reqIdentifier,
+    clear,
+  } = useHttp();
   const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
   const [showModal, setShowModal] = useState(false);
   const [activeIngredientIndex, setActiveIngredientIndex] = useState(null);
+
+  // handling the http response from remove and add ingredients
+  useEffect(() => {
+    if (!isLoading && !error && reqIdentifier === 'REMOVE_INGREDIENT') {
+      dispatch({ type: ReducerTypes.delete, id: reqExtra });
+    } else if (!isLoading && !error && reqIdentifier === 'ADD_INGREDIENT') {
+      dispatch({
+        type: ReducerTypes.add,
+        ingredient: { id: data.name, ...reqExtra },
+      });
+    }
+  }, [data, reqExtra, error, isLoading, reqIdentifier]);
 
   const filterIngredientsHandler = useCallback((filterIngredients) => {
     dispatch({ type: ReducerTypes.set, ingredients: filterIngredients });
@@ -62,69 +61,29 @@ const Ingredients = () => {
     setShowModal(false);
   };
 
-  const addIngredientHandler = useCallback((ingredient) => {
-    // dispatchHttp({ type: 'SEND' });
-    // fetch(
-    //   'https://hooks-intro-51b69-default-rtdb.firebaseio.com/ingredients.json',
-    //   {
-    //     method: 'POST',
-    //     body: JSON.stringify(ingredient),
-    //     headers: { 'Content-Type': 'application/json' },
-    //   }
-    // )
-    //   .then((res) => {
-    //     dispatchHttp({ type: 'RESPONSE' });
-    //     return res.json();
-    //   })
-    //   .then((resData) => {
-    //     dispatch({
-    //       type: ReducerTypes.add,
-    //       ingredient: { id: resData.name, ...ingredient },
-    //     });
-    //   });
-  }, []);
+  const addIngredientHandler = useCallback(
+    (ingredient) => {
+      sendRequest(
+        'https://hooks-intro-51b69-default-rtdb.firebaseio.com/ingredients.json',
+        'POST',
+        JSON.stringify(ingredient),
+        ingredient,
+        'ADD_INGREDIENT'
+      );
+    },
+    [sendRequest]
+  );
 
-  const removeIngredientHandler = () => {
-    // for some reason useringredients[activeIngredientIndex].id becomes undefined you go to use this function.
-
+  const removeIngredientHandler = useCallback(() => {
     sendRequest(
       `https://hooks-intro-51b69-default-rtdb.firebaseio.com/ingredients/${userIngredients[activeIngredientIndex].id}.json`,
-      ReducerTypes.delete
+      ReducerTypes.delete,
+      null,
+      userIngredients[activeIngredientIndex].id,
+      'REMOVE_INGREDIENT'
     );
     setShowModal(false);
-    // dispatchHttp({ type: 'SEND' });
-    // fetch(
-    //   `https://hooks-intro-51b69-default-rtdb.firebaseio.com/ingredients/${userIngredients[activeIngredientIndex].id}.json`,
-    //   {
-    //     //idk what this is doing
-    //     method: ReducerTypes.delete,
-    //   }
-    // )
-    //   .then((res) => {
-    //     dispatchHttp({ type: 'RESPONSE' });
-    //     // setUserIngredients((prevIngredients) =>
-    //     //   prevIngredients.filter((ingredient) => ingredient.id !== index)
-    //     // );
-    //     dispatch({
-    //       type: ReducerTypes.delete,
-    //       id: userIngredients[activeIngredientIndex].id,
-    //     });
-    //     setShowModal(false);
-    //   })
-    //   .catch((err) => {
-    //     dispatchHttp({ type: 'ERROR', errorMessage: 'SOMETHING WENT WRONG' });
-    //     // its working just failing cuz https
-    //     dispatch({
-    //       type: ReducerTypes.delete,
-    //       id: userIngredients[activeIngredientIndex].id,
-    //     });
-    //     setShowModal(false);
-    //   });
-  };
-
-  const clearError = useCallback(() => {
-    // dispatchHttp({ type: 'CLEAR' });
-  }, []);
+  }, [sendRequest, activeIngredientIndex, userIngredients]);
 
   const ingredientList = () => {
     return (
@@ -137,7 +96,7 @@ const Ingredients = () => {
 
   return (
     <div className='App'>
-      {error && <ErrorModal onClose={clearError}>{error}</ErrorModal>}
+      {error && <ErrorModal onClose={clear}>{error}</ErrorModal>}
       {showModal && (
         <ConfirmationModal
           onCancel={onCancel}
